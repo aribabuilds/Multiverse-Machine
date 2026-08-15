@@ -1,0 +1,27 @@
+@import 'tailwindcss';
+
+/* Design tokens for the locked visual direction: a dark desktop behind a
+   Mac-style app window. Kept minimal for M0 — expanded in later milestones. */
+@theme {
+  --color-desktop: #0a0a0f;
+  --color-window: #16161d;
+  --color-window-titlebar: #1e1e27;
+  --color-window-border: #2a2a35;
+  --color-ink: #e7e7ee;
+  --color-ink-dim: #9a9aae;
+  --color-cosmic: #7c6cff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-desktop);
+  color: var(--color-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

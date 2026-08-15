@@ -1,0 +1,10 @@
+# Netlify static-hosting config. Auto-deploys on push once the repo is linked.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback so client-side routes resolve to index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
