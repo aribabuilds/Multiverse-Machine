@@ -1,0 +1,4 @@
+# Normalize line endings to LF in the repo; check out native on each platform.
+* text=auto eol=lf
+*.pdf binary
+*.svg text
