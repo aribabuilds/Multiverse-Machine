@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Multiverse Machine — Engine Test Harness</title>
+  </head>
+  <body>
+    <h1>Engine test harness</h1>
+    <p>
+      No styling on purpose (M2 checkpoint) — this only exists to sanity-check the generation
+      engine.
+    </p>
+    <p id="status">Model not loaded yet.</p>
+
+    <form id="form">
+      <div>
+        <label>
+          Prompt
+          <input
+            id="prompt"
+            type="text"
+            size="70"
+            value="Write one sentence about a city that exists in two places at once."
+          />
+        </label>
+      </div>
+      <div>
+        <label
+          >Temperature
+          <input id="temperature" type="number" step="0.1" min="0.1" max="2" value="0.8"
+        /></label>
+        <label
+          >Branch count <input id="branchCount" type="number" step="1" min="1" max="10" value="5"
+        /></label>
+        <label>
+          Max new tokens
+          <input id="maxNewTokens" type="number" step="1" min="1" max="100" value="40" />
+        </label>
+      </div>
+      <div>
+        <button type="submit" id="generateBtn" disabled>Generate</button>
+        <button type="button" id="resetBtn">Reset</button>
+      </div>
+    </form>
+
+    <h2>Active path</h2>
+    <pre id="activePath"></pre>
+
+    <h2>Tree</h2>
+    <p>
+      Click "continue from here" on any node to regenerate its subtree from that point (timeline
+      switching).
+    </p>
+    <div id="tree"></div>
+
+    <script type="module" src="/src/test-harness.ts"></script>
+  </body>
+</html>
