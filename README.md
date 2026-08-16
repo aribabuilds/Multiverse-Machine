@@ -38,7 +38,7 @@ The app is a static build (`dist/`) — deploy it anywhere static, for free. Con
 
 - **Vercel** — import the repo; `vercel.json` sets the build. Auto-deploys on push.
 - **Netlify** — link the repo; `netlify.toml` sets the build. Auto-deploys on push.
-- **GitHub Pages** — `.github/workflows/deploy.yml` builds and deploys on push to `main`. Enable Pages → "GitHub Actions" in repo settings. For a project page, also set `base: '/<repo>/'` in `vite.config.ts`.
+- **GitHub Pages** — `.github/workflows/deploy.yml` builds and deploys on push to `main`. Enable Pages → "GitHub Actions" in repo settings. This is a project page (`/<repo>/`, not the domain root), so the workflow sets `GITHUB_PAGES=true` during the build, which `vite.config.ts` uses to prefix asset URLs correctly. If the repo is ever renamed, update the hardcoded path in `vite.config.ts` to match.
 
 ## Build milestones
 

@@ -5,6 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages serves a project page from /<repo>/, not /, so asset URLs
+  // need that prefix baked in — but only there. Vercel/Netlify/local dev all
+  // serve from the root and would break if this were hardcoded.
+  base: process.env.GITHUB_PAGES === 'true' ? '/Multiverse-Machine/' : '/',
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {

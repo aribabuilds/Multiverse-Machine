@@ -1,8 +1,9 @@
 # GitHub Pages auto-deploy on push to main.
 #
-# If you deploy to a *project* page (https://<user>.github.io/<repo>/), also set
-# `base: '/<repo>/'` in vite.config.ts so asset URLs resolve. Not needed for a
-# user/org page or a custom domain. Vercel and Netlify need no base change.
+# This is a *project* page (https://<user>.github.io/<repo>/), which serves
+# from a subpath, not /. The GITHUB_PAGES=true env var below tells
+# vite.config.ts to prefix built asset URLs with /<repo>/ accordingly.
+# Vercel and Netlify serve from the root and need no such prefix.
 name: Deploy to GitHub Pages
 
 on:
@@ -30,6 +31,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          GITHUB_PAGES: 'true'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
