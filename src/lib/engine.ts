@@ -96,6 +96,12 @@ function normalizeEosTokenIds(eosTokenId: number | number[] | null | undefined):
  * If `onStep` is given, it's called with an in-progress snapshot of the tree
  * after every generated token, so a UI can animate tokens appearing live
  * instead of waiting for the whole generation to finish.
+ *
+ * Recomputes the full prefix on every step rather than reusing a KV cache.
+ * A cache was tried and measured *slower* end-to-end in testing here — likely
+ * this backend's per-tensor-binding overhead outweighing the FLOPs it saves
+ * at these short (~40-token) generation lengths — so this simpler form is
+ * what's shipping. See the M6 milestone notes before trying that again.
  */
 export async function generateFromNode(
   tree: MultiverseTree,

@@ -6,6 +6,7 @@ import {
   type HierarchyNode,
   type MultiverseTree,
 } from '../lib/tree'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 
 interface BranchingTreeProps {
   tree: MultiverseTree
@@ -31,6 +32,8 @@ const TRANSITION_MS = 300
 export function BranchingTree({ tree, activeNodeId, onSelectNode, disabled }: BranchingTreeProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const onSelectRef = useRef(onSelectNode)
+  const reducedMotion = usePrefersReducedMotion()
+  const transitionMs = reducedMotion ? 0 : TRANSITION_MS
 
   useEffect(() => {
     onSelectRef.current = onSelectNode
@@ -79,10 +82,10 @@ export function BranchingTree({ tree, activeNodeId, onSelectNode, disabled }: Br
             .attr('d', linkGenerator)
             .style('opacity', 0),
         (update) => update,
-        (exit) => exit.transition().duration(TRANSITION_MS).style('opacity', 0).remove(),
+        (exit) => exit.transition().duration(transitionMs).style('opacity', 0).remove(),
       )
       .transition()
-      .duration(TRANSITION_MS)
+      .duration(transitionMs)
       .attr('d', linkGenerator)
       .attr('stroke', (d) =>
         activePath.has(d.target.data.node.id) ? 'var(--color-cosmic)' : '#7c6cff',
@@ -110,7 +113,7 @@ export function BranchingTree({ tree, activeNodeId, onSelectNode, disabled }: Br
           return g
         },
         (update) => update,
-        (exit) => exit.transition().duration(TRANSITION_MS).style('opacity', 0).remove(),
+        (exit) => exit.transition().duration(transitionMs).style('opacity', 0).remove(),
       )
 
     nodeGroups.style('cursor', disabled ? 'default' : 'pointer')
@@ -124,7 +127,7 @@ export function BranchingTree({ tree, activeNodeId, onSelectNode, disabled }: Br
 
     nodeGroups
       .transition()
-      .duration(TRANSITION_MS)
+      .duration(transitionMs)
       .attr('transform', (d) => `translate(${d.y}, ${d.x})`)
       .style('opacity', 1)
 
@@ -148,7 +151,7 @@ export function BranchingTree({ tree, activeNodeId, onSelectNode, disabled }: Br
       .style('opacity', (d) =>
         activePath.has(d.data.node.id) ? 1 : 0.35 + 0.5 * d.data.node.probability,
       )
-  }, [tree, activeNodeId, disabled])
+  }, [tree, activeNodeId, disabled, transitionMs])
 
   return (
     <div className="h-full w-full overflow-auto">

@@ -9,6 +9,7 @@ import {
 } from '../lib/engine'
 import { deepestChosenDescendant, getPathNodeIds, type MultiverseTree } from '../lib/tree'
 import { isWebGpuAvailable } from '../lib/webgpu'
+import { usePrefersReducedMotion } from './usePrefersReducedMotion'
 
 export type ModelStatus = 'unsupported' | 'loading' | 'ready' | 'error'
 
@@ -21,9 +22,7 @@ const REPLAY_STEP_MS = 220
  * and replay the current path from the start.
  */
 export function useMultiverse() {
-  const [modelStatus, setModelStatus] = useState<ModelStatus>(() =>
-    isWebGpuAvailable() ? 'loading' : 'unsupported',
-  )
+  const [modelStatus, setModelStatus] = useState<ModelStatus>('loading')
   const [modelId, setModelId] = useState<string | null>(null)
   const [progress, setProgress] = useState<ProgressInfo | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -35,23 +34,30 @@ export function useMultiverse() {
 
   // Guards against overlapping calls from rapid clicks without waiting on a state update.
   const isBusyRef = useRef(false)
+  const reducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
     if (modelStatus !== 'loading') return
     let cancelled = false
-    loadEngineModel((p) => {
-      if (!cancelled) setProgress(p)
-    })
-      .then(({ modelId: id }) => {
+    void (async () => {
+      // Check before downloading a multi-gigabyte model that turns out unusable.
+      if (!(await isWebGpuAvailable())) {
+        if (!cancelled) setModelStatus('unsupported')
+        return
+      }
+      try {
+        const { modelId: id } = await loadEngineModel((p) => {
+          if (!cancelled) setProgress(p)
+        })
         if (cancelled) return
         setModelId(id)
         setModelStatus('ready')
-      })
-      .catch((err: unknown) => {
+      } catch (err) {
         if (cancelled) return
         setErrorMessage(err instanceof Error ? err.message : String(err))
         setModelStatus('error')
-      })
+      }
+    })()
     return () => {
       cancelled = true
     }
@@ -114,9 +120,14 @@ export function useMultiverse() {
     setErrorMessage(null)
   }, [])
 
-  /** Re-traces the currently active path from the root, one node at a time. */
+  /**
+   * Re-traces the currently active path from the root, one node at a time.
+   * Replay's whole purpose is that animated retrace, so with reduced motion
+   * preferred it's a no-op rather than an instant, motion-free version of
+   * itself — there's nothing meaningful left to show.
+   */
   const replay = useCallback(async () => {
-    if (!tree || !activeNodeId || isBusyRef.current) return
+    if (!tree || !activeNodeId || isBusyRef.current || reducedMotion) return
     const path = getPathNodeIds(tree, activeNodeId)
     isBusyRef.current = true
     try {
@@ -127,7 +138,7 @@ export function useMultiverse() {
     } finally {
       isBusyRef.current = false
     }
-  }, [tree, activeNodeId])
+  }, [tree, activeNodeId, reducedMotion])
 
   return {
     modelStatus,
@@ -143,5 +154,6 @@ export function useMultiverse() {
     continueFrom,
     reset,
     replay,
+    reducedMotion,
   }
 }

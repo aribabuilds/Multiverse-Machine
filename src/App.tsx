@@ -22,6 +22,7 @@ function App() {
     continueFrom,
     reset,
     replay,
+    reducedMotion,
   } = useMultiverse()
 
   const [promptDraft, setPromptDraft] = useState(DEFAULT_PROMPT)
@@ -69,7 +70,8 @@ function App() {
                 <button
                   type="button"
                   onClick={() => void replay()}
-                  disabled={!tree || isGenerating}
+                  disabled={!tree || isGenerating || reducedMotion}
+                  title={reducedMotion ? 'Disabled — reduce motion is on' : undefined}
                   className="rounded-lg border border-window-border px-3 py-2 text-sm text-ink-dim transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Replay
@@ -132,7 +134,7 @@ function LoadingOverlay({ progress }: { progress: ProgressInfo | null }) {
       : (progress?.status ?? 'Starting…')
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-window-border border-t-cosmic" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-window-border border-t-cosmic motion-reduce:animate-none" />
       <p className="text-sm text-ink-dim">{label}</p>
       <p className="max-w-xs text-xs text-ink-dim/60">
         First load downloads and caches the model in your browser — this can take a while.
@@ -152,10 +154,11 @@ function EmptyState() {
 function UnsupportedMessage() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 px-10 text-center">
-      <p className="font-medium text-ink">This browser doesn't support WebGPU.</p>
+      <p className="font-medium text-ink">This browser can't run WebGPU.</p>
       <p className="max-w-sm text-sm text-ink-dim">
-        The Multiverse Machine runs a language model directly in your browser, which needs WebGPU.
-        Try a recent version of Chrome or Edge.
+        The Multiverse Machine runs a language model directly on your GPU, in your browser — no
+        servers involved. That needs WebGPU, which isn't available here. Try a recent version of
+        Chrome or Edge, and make sure hardware acceleration is turned on.
       </p>
     </div>
   )
