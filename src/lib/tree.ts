@@ -68,10 +68,15 @@ export function getPathText(tree: MultiverseTree, nodeId: string): string {
 
 /** Ids of every node from the root down to and including `nodeId`. */
 export function getAncestorIds(tree: MultiverseTree, nodeId: string): Set<string> {
-  const ids = new Set<string>()
+  return new Set(getPathNodeIds(tree, nodeId))
+}
+
+/** Ordered node ids from the root down to and including `nodeId`. */
+export function getPathNodeIds(tree: MultiverseTree, nodeId: string): string[] {
+  const ids: string[] = []
   let current: BranchNode | undefined = tree.nodes[nodeId]
   while (current) {
-    ids.add(current.id)
+    ids.unshift(current.id)
     current = current.parentId ? tree.nodes[current.parentId] : undefined
   }
   return ids
@@ -81,8 +86,20 @@ export function getAncestorIds(tree: MultiverseTree, nodeId: string): Set<string
 export function deepestChosenDescendant(tree: MultiverseTree, nodeId: string): string {
   let current = tree.nodes[nodeId]
   while (current.childIds.length > 0) {
-    const chosenChildId = current.childIds.find((id) => tree.nodes[id].isChosen) ?? current.childIds[0]
+    const chosenChildId =
+      current.childIds.find((id) => tree.nodes[id].isChosen) ?? current.childIds[0]
     current = tree.nodes[chosenChildId]
   }
   return current.id
+}
+
+/** A nested view of the tree, shaped for d3.hierarchy (which expects a `children` array). */
+export interface HierarchyNode {
+  node: BranchNode
+  children: HierarchyNode[]
+}
+
+export function buildHierarchy(tree: MultiverseTree, nodeId: string = tree.rootId): HierarchyNode {
+  const node = tree.nodes[nodeId]
+  return { node, children: node.childIds.map((id) => buildHierarchy(tree, id)) }
 }

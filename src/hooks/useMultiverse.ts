@@ -1,0 +1,147 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ProgressInfo } from '@huggingface/transformers'
+import {
+  createTree,
+  generateFromNode,
+  loadEngineModel,
+  DEFAULT_GENERATION_PARAMS,
+  type GenerationParams,
+} from '../lib/engine'
+import { deepestChosenDescendant, getPathNodeIds, type MultiverseTree } from '../lib/tree'
+import { isWebGpuAvailable } from '../lib/webgpu'
+
+export type ModelStatus = 'unsupported' | 'loading' | 'ready' | 'error'
+
+const REPLAY_STEP_MS = 220
+
+/**
+ * Owns the model, the current tree, and the "where is the user looking
+ * right now" pointer, and exposes the actions the UI drives: generate a
+ * fresh multiverse, switch to any branch (ghost or already-explored), reset,
+ * and replay the current path from the start.
+ */
+export function useMultiverse() {
+  const [modelStatus, setModelStatus] = useState<ModelStatus>(() =>
+    isWebGpuAvailable() ? 'loading' : 'unsupported',
+  )
+  const [modelId, setModelId] = useState<string | null>(null)
+  const [progress, setProgress] = useState<ProgressInfo | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const [tree, setTree] = useState<MultiverseTree | null>(null)
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [params, setParams] = useState<GenerationParams>(DEFAULT_GENERATION_PARAMS)
+
+  // Guards against overlapping calls from rapid clicks without waiting on a state update.
+  const isBusyRef = useRef(false)
+
+  useEffect(() => {
+    if (modelStatus !== 'loading') return
+    let cancelled = false
+    loadEngineModel((p) => {
+      if (!cancelled) setProgress(p)
+    })
+      .then(({ modelId: id }) => {
+        if (cancelled) return
+        setModelId(id)
+        setModelStatus('ready')
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setErrorMessage(err instanceof Error ? err.message : String(err))
+        setModelStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [modelStatus])
+
+  const generate = useCallback(
+    async (prompt: string) => {
+      const trimmed = prompt.trim()
+      if (!trimmed || isBusyRef.current || modelStatus !== 'ready') return
+      isBusyRef.current = true
+      setIsGenerating(true)
+      setErrorMessage(null)
+      try {
+        const fresh = await createTree(trimmed)
+        setTree(fresh)
+        setActiveNodeId(fresh.rootId)
+        const finished = await generateFromNode(fresh, fresh.rootId, params, (partial) => {
+          setTree(partial)
+          setActiveNodeId(deepestChosenDescendant(partial, partial.rootId))
+        })
+        setTree(finished)
+        setActiveNodeId(deepestChosenDescendant(finished, finished.rootId))
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : String(err))
+      } finally {
+        isBusyRef.current = false
+        setIsGenerating(false)
+      }
+    },
+    [modelStatus, params],
+  )
+
+  const continueFrom = useCallback(
+    async (nodeId: string) => {
+      if (!tree || isBusyRef.current || modelStatus !== 'ready') return
+      isBusyRef.current = true
+      setIsGenerating(true)
+      setErrorMessage(null)
+      try {
+        const finished = await generateFromNode(tree, nodeId, params, (partial) => {
+          setTree(partial)
+          setActiveNodeId(deepestChosenDescendant(partial, nodeId))
+        })
+        setTree(finished)
+        setActiveNodeId(deepestChosenDescendant(finished, nodeId))
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : String(err))
+      } finally {
+        isBusyRef.current = false
+        setIsGenerating(false)
+      }
+    },
+    [tree, modelStatus, params],
+  )
+
+  const reset = useCallback(() => {
+    if (isBusyRef.current) return
+    setTree(null)
+    setActiveNodeId(null)
+    setErrorMessage(null)
+  }, [])
+
+  /** Re-traces the currently active path from the root, one node at a time. */
+  const replay = useCallback(async () => {
+    if (!tree || !activeNodeId || isBusyRef.current) return
+    const path = getPathNodeIds(tree, activeNodeId)
+    isBusyRef.current = true
+    try {
+      for (const id of path) {
+        setActiveNodeId(id)
+        await new Promise((resolve) => setTimeout(resolve, REPLAY_STEP_MS))
+      }
+    } finally {
+      isBusyRef.current = false
+    }
+  }, [tree, activeNodeId])
+
+  return {
+    modelStatus,
+    modelId,
+    progress,
+    errorMessage,
+    tree,
+    activeNodeId,
+    isGenerating,
+    params,
+    setParams,
+    generate,
+    continueFrom,
+    reset,
+    replay,
+  }
+}

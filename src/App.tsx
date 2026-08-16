@@ -1,36 +1,162 @@
-/**
- * M0 placeholder page.
- *
- * This is only the scaffolding checkpoint: a calm, Mac-native window sitting on a
- * dark desktop, previewing the approved visual direction. The branching
- * visualization, controls, and in-browser model all arrive in later milestones.
- */
+import { useState, type FormEvent } from 'react'
+import type { ProgressInfo } from '@huggingface/transformers'
+import { useMultiverse } from './hooks/useMultiverse'
+import { WindowChrome } from './components/WindowChrome'
+import { GlassControlPanel } from './components/GlassControlPanel'
+import { BranchingTree } from './components/BranchingTree'
+
+const DEFAULT_PROMPT = 'Write one sentence about a city that exists in two places at once.'
+
 function App() {
+  const {
+    modelStatus,
+    modelId,
+    progress,
+    errorMessage,
+    tree,
+    activeNodeId,
+    isGenerating,
+    params,
+    setParams,
+    generate,
+    continueFrom,
+    reset,
+    replay,
+  } = useMultiverse()
+
+  const [promptDraft, setPromptDraft] = useState(DEFAULT_PROMPT)
+  const [validationMessage, setValidationMessage] = useState<string | null>(null)
+
+  const controlsDisabled = isGenerating || modelStatus !== 'ready'
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!promptDraft.trim()) {
+      setValidationMessage('Type a prompt first.')
+      return
+    }
+    setValidationMessage(null)
+    void generate(promptDraft)
+  }
+
   return (
     <div className="flex min-h-full items-center justify-center bg-desktop p-6">
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-window-border bg-window shadow-2xl shadow-black/50">
-        {/* Title bar with macOS traffic-light dots */}
-        <div className="flex items-center gap-2 border-b border-window-border bg-window-titlebar px-4 py-3">
-          <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-          <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
-          <span className="h-3 w-3 rounded-full bg-[#28c840]" />
-          <span className="ml-3 text-sm font-medium text-ink-dim">The Multiverse Machine</span>
-        </div>
+      <div className="h-[min(760px,85vh)] w-full max-w-4xl">
+        <WindowChrome title="The Multiverse Machine">
+          {modelStatus === 'unsupported' ? (
+            <UnsupportedMessage />
+          ) : (
+            <div className="flex h-full flex-col">
+              <form
+                onSubmit={handleSubmit}
+                className="flex shrink-0 items-center gap-2 border-b border-window-border px-4 py-3"
+              >
+                <input
+                  type="text"
+                  value={promptDraft}
+                  onChange={(e) => setPromptDraft(e.target.value)}
+                  placeholder="Type a sentence for the model to write…"
+                  disabled={controlsDisabled}
+                  className="flex-1 rounded-lg border border-window-border bg-black/20 px-3 py-2 text-sm text-ink placeholder:text-ink-dim/60 focus:ring-1 focus:ring-cosmic focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={controlsDisabled}
+                  className="rounded-lg bg-cosmic px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {isGenerating ? 'Generating…' : 'Generate'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void replay()}
+                  disabled={!tree || isGenerating}
+                  className="rounded-lg border border-window-border px-3 py-2 text-sm text-ink-dim transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Replay
+                </button>
+                <button
+                  type="button"
+                  onClick={reset}
+                  disabled={!tree || isGenerating}
+                  className="rounded-lg border border-window-border px-3 py-2 text-sm text-ink-dim transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Reset
+                </button>
+              </form>
 
-        {/* Window body */}
-        <div className="px-10 py-16 text-center">
-          <h1 className="bg-gradient-to-r from-ink to-cosmic bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
-            The Multiverse Machine
-          </h1>
-          <p className="mx-auto mt-4 max-w-md text-balance text-ink-dim">
-            Type a sentence, watch an AI write it word by word, and see every word it{' '}
-            <em>almost</em> wrote branch off as faded parallel timelines.
-          </p>
-          <p className="mt-10 text-xs uppercase tracking-widest text-ink-dim/70">
-            M0 · scaffolding · runs entirely in your browser
-          </p>
-        </div>
+              {(validationMessage ?? errorMessage) && (
+                <p className="shrink-0 bg-red-500/10 px-4 py-1.5 text-xs text-red-300">
+                  {validationMessage ?? errorMessage}
+                </p>
+              )}
+
+              <div className="relative min-h-0 flex-1">
+                {modelStatus === 'loading' && <LoadingOverlay progress={progress} />}
+
+                {tree && activeNodeId ? (
+                  <BranchingTree
+                    tree={tree}
+                    activeNodeId={activeNodeId}
+                    onSelectNode={(nodeId) => void continueFrom(nodeId)}
+                    disabled={isGenerating}
+                  />
+                ) : (
+                  modelStatus === 'ready' && <EmptyState />
+                )}
+
+                <div className="absolute top-4 right-4 w-56">
+                  <GlassControlPanel
+                    params={params}
+                    onChange={setParams}
+                    disabled={controlsDisabled}
+                  />
+                </div>
+              </div>
+
+              <p className="shrink-0 border-t border-window-border px-4 py-2 text-[11px] text-ink-dim/70">
+                {modelId ?? 'Loading model…'} · runs entirely in your browser — nothing you type
+                ever leaves this device
+              </p>
+            </div>
+          )}
+        </WindowChrome>
       </div>
+    </div>
+  )
+}
+
+function LoadingOverlay({ progress }: { progress: ProgressInfo | null }) {
+  const label =
+    progress?.status === 'progress'
+      ? `Downloading ${progress.file}: ${progress.progress.toFixed(0)}%`
+      : (progress?.status ?? 'Starting…')
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-window-border border-t-cosmic" />
+      <p className="text-sm text-ink-dim">{label}</p>
+      <p className="max-w-xs text-xs text-ink-dim/60">
+        First load downloads and caches the model in your browser — this can take a while.
+      </p>
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-10 text-center">
+      <p className="text-ink-dim">Type a prompt and hit Generate to open a multiverse.</p>
+    </div>
+  )
+}
+
+function UnsupportedMessage() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 px-10 text-center">
+      <p className="font-medium text-ink">This browser doesn't support WebGPU.</p>
+      <p className="max-w-sm text-sm text-ink-dim">
+        The Multiverse Machine runs a language model directly in your browser, which needs WebGPU.
+        Try a recent version of Chrome or Edge.
+      </p>
     </div>
   )
 }
