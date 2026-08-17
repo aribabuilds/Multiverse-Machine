@@ -19,14 +19,17 @@ export interface MultiverseTree {
   /** Synthetic node with no token, representing "before the first generated token". */
   rootId: string
   nodes: Record<string, BranchNode>
+  /** The raw prompt text this tree was started from. Constant for the tree's lifetime. */
+  prompt: string
   /** Tokenized (chat-templated) prompt. Constant for the tree's lifetime. */
   promptInputIds: number[]
 }
 
-export function createEmptyTree(promptInputIds: number[]): MultiverseTree {
+export function createEmptyTree(prompt: string, promptInputIds: number[]): MultiverseTree {
   const rootId = 'root'
   return {
     rootId,
+    prompt,
     promptInputIds,
     nodes: {
       [rootId]: {

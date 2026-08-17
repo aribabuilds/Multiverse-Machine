@@ -37,7 +37,7 @@ export async function createTree(prompt: string): Promise<MultiverseTree> {
     return_dict: true,
   }) as { input_ids: Tensor }
   const promptInputIds = (input_ids.tolist()[0] as bigint[]).map(Number)
-  return createEmptyTree(promptInputIds)
+  return createEmptyTree(prompt, promptInputIds)
 }
 
 type TokenProb = { id: number; prob: number }

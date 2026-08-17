@@ -4,6 +4,7 @@ import { useMultiverse } from './hooks/useMultiverse'
 import { WindowChrome } from './components/WindowChrome'
 import { GlassControlPanel } from './components/GlassControlPanel'
 import { BranchingTree } from './components/BranchingTree'
+import { AnswerPanel } from './components/AnswerPanel'
 
 const DEFAULT_PROMPT = 'Write one sentence about a city that exists in two places at once.'
 
@@ -97,12 +98,17 @@ function App() {
                 {modelStatus === 'loading' && <LoadingOverlay progress={progress} />}
 
                 {tree && activeNodeId ? (
-                  <BranchingTree
-                    tree={tree}
-                    activeNodeId={activeNodeId}
-                    onSelectNode={(nodeId) => void continueFrom(nodeId)}
-                    disabled={isBusy}
-                  />
+                  <>
+                    <BranchingTree
+                      tree={tree}
+                      activeNodeId={activeNodeId}
+                      onSelectNode={(nodeId) => void continueFrom(nodeId)}
+                      disabled={isBusy}
+                    />
+                    <div className="absolute top-4 left-4">
+                      <AnswerPanel tree={tree} activeNodeId={activeNodeId} />
+                    </div>
+                  </>
                 ) : (
                   modelStatus === 'ready' && <EmptyState />
                 )}
