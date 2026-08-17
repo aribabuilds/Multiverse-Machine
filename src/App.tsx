@@ -16,6 +16,7 @@ function App() {
     tree,
     activeNodeId,
     isGenerating,
+    isBusy,
     params,
     setParams,
     generate,
@@ -28,7 +29,7 @@ function App() {
   const [promptDraft, setPromptDraft] = useState(DEFAULT_PROMPT)
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
 
-  const controlsDisabled = isGenerating || modelStatus !== 'ready'
+  const controlsDisabled = isBusy || modelStatus !== 'ready'
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -70,7 +71,7 @@ function App() {
                 <button
                   type="button"
                   onClick={() => void replay()}
-                  disabled={!tree || isGenerating || reducedMotion}
+                  disabled={!tree || isBusy || reducedMotion}
                   title={reducedMotion ? 'Disabled — reduce motion is on' : undefined}
                   className="rounded-lg border border-window-border px-3 py-2 text-sm text-ink-dim transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -79,7 +80,7 @@ function App() {
                 <button
                   type="button"
                   onClick={reset}
-                  disabled={!tree || isGenerating}
+                  disabled={!tree || isBusy}
                   className="rounded-lg border border-window-border px-3 py-2 text-sm text-ink-dim transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Reset
@@ -100,7 +101,7 @@ function App() {
                     tree={tree}
                     activeNodeId={activeNodeId}
                     onSelectNode={(nodeId) => void continueFrom(nodeId)}
-                    disabled={isGenerating}
+                    disabled={isBusy}
                   />
                 ) : (
                   modelStatus === 'ready' && <EmptyState />

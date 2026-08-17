@@ -30,7 +30,12 @@ export function useMultiverse() {
   const [tree, setTree] = useState<MultiverseTree | null>(null)
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isReplaying, setIsReplaying] = useState(false)
   const [params, setParams] = useState<GenerationParams>(DEFAULT_GENERATION_PARAMS)
+  // Generating and replaying both mean "don't let the user start something
+  // else, and let the view follow activeNodeId around" — but only
+  // generating gets its own button label ("Generating…").
+  const isBusy = isGenerating || isReplaying
 
   // Guards against overlapping calls from rapid clicks without waiting on a state update.
   const isBusyRef = useRef(false)
@@ -130,6 +135,7 @@ export function useMultiverse() {
     if (!tree || !activeNodeId || isBusyRef.current || reducedMotion) return
     const path = getPathNodeIds(tree, activeNodeId)
     isBusyRef.current = true
+    setIsReplaying(true)
     try {
       for (const id of path) {
         setActiveNodeId(id)
@@ -137,6 +143,7 @@ export function useMultiverse() {
       }
     } finally {
       isBusyRef.current = false
+      setIsReplaying(false)
     }
   }, [tree, activeNodeId, reducedMotion])
 
@@ -148,6 +155,7 @@ export function useMultiverse() {
     tree,
     activeNodeId,
     isGenerating,
+    isBusy,
     params,
     setParams,
     generate,
